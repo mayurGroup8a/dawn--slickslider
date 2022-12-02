@@ -41,6 +41,16 @@
   if is_duplicate
     assign id_append = '-duplicate'
   endif
+
+  assign currentColor = false
+  for option in product.options
+    if option == "Color" or option == "Colour"
+      assign index = forloop.index0
+    endif
+  endfor
+  if section.settings.enable_mediaFilter
+    assign currentColor =product.selected_or_first_available_variant.options[index]
+  endif
 -%}
 
 <media-gallery
@@ -51,76 +61,126 @@
   {% endif %}
   aria-label="{{ 'products.product.media.gallery_viewer' | t }}"
   data-desktop-layout="{{ section.settings.gallery_layout }}"
+  data-mediaFilter="{{ section.settings.enable_mediaFilter }}"
+  {% if currentColor != false %}data-mediaCurrentColor="{{ currentColor | handleize }}"{% endif %}
 >
   <div id="GalleryStatus-{{ section.id }}" class="visually-hidden" role="status"></div>
-  <slider-component id="GalleryViewer-{{ section.id }}{{ id_append }}" class="slider-mobile-gutter">
-    {%- unless is_duplicate -%}
-      <a class="skip-to-content-link button visually-hidden quick-add-hidden" href="#ProductInfo-{{ section.id }}">
-        {{ "accessibility.skip_to_product_info" | t }}
-      </a>
-    {%- endunless -%}
-    <ul
-      id="Slider-Gallery-{{ section.id }}{{ id_append }}"
-      class="product__media-list contains-media grid grid--peek list-unstyled slider slider--mobile"
-      role="list"
-    >
-      {%- if product.selected_or_first_available_variant.featured_media != null -%}
-        {%- assign featured_media = product.selected_or_first_available_variant.featured_media -%}
-        <li
-          id="Slide-{{ section.id }}-{{ featured_media.id }}{{ id_append }}"
-          class="product__media-item grid__item slider__slide is-active{% if single_media_visible %} product__media-item--single{% endif %}{% if featured_media.media_type != 'image' %} product__media-item--full{% endif %}{% if section.settings.hide_variants and variant_images contains featured_media.src %} product__media-item--variant{% endif %}"
-          data-media-id="{{ section.id }}-{{ featured_media.id }}"
-        >
-          {%- assign media_position = 1 -%}
-          {% render 'product-thumbnail', media: featured_media, media_count: media_count, position: media_position, desktop_layout: section.settings.gallery_layout, mobile_layout: section.settings.mobile_thumbnails, loop: section.settings.enable_video_looping, modal_id: section.id, xr_button: true, media_width: media_width, lazy_load: false %}
-        </li>
-      {%- endif -%}
-      {%- for media in product.media -%}
-        {%- unless media.id == product.selected_or_first_available_variant.featured_media.id -%}
+  {% if section.settings.gallery_layout contains 'slick' %}
+    <slickslider-component id="slickslider" class="product--columns" data-slick-dirfection="{% if section.settings.gallery_layout == 'slick-horizontal' %}false{% elsif section.settings.gallery_layout == 'slick-vertical' %}true{% endif%}">
+      <ul id="slider" class="list-unstyled">
+        {%- for media in product.media -%}
+          {% if media.media_type == 'image' %}
+            <li
+              id="Slide-{{ section.id }}-{{ media.id }}"
+              data-meidacolor="{{ media.alt | handleize }}"
+              class="slide {{ media.alt | handleize }}  product-media-item slider__slide {% unless media.alt == currentColor or  currentColor == false %}{% endunless%} "
+              data-media-id="{{ section.id }}-{{ media.id }}"
+            >
+              {%- liquid
+                assign media_position = media_position | default: 0 | plus: 1
+                assign lazy_load = false
+                if media_position > 1
+                  assign lazy_load = true
+                endif
+                render 'product-thumbnail', media: media, media_count: media_count, position: media_position, desktop_layout: columns, mobile_layout: section.settings.mobile_thumbnails, loop: section.settings.enable_video_looping, modal_id: section.id, xr_button: true, media_width: media_width, lazy_load: lazy_load
+              -%}
+            </li>
+          {% endif %}
+        {%- endfor -%}
+      </ul>
+      <ul id="thumbs" class="list-unstyled">
+        {%- for media in product.media -%}
+          {% if media.media_type == 'image' %}
+            <li
+              id="Slide-Thumbs-{{ section.id }}-{{ media.id }}"
+              data-meidacolor="{{ media.alt | handleize }}"
+              class="slide {{ media.alt | handleize }}  product-media-item slider__slide{% unless media.alt == currentColor or  currentColor == false %}{% endunless%} "
+              data-media-id="{{ section.id }}-{{ media.id }}"
+            >
+              {%- liquid
+                assign media_position = media_position | default: 0 | plus: 1
+                assign lazy_load = false
+                if media_position > 1
+                  assign lazy_load = true
+                endif
+                render 'product-thumbnail', media: media, media_count: media_count, position: media_position, desktop_layout: columns, mobile_layout: section.settings.mobile_thumbnails, loop: section.settings.enable_video_looping, modal_id: section.id, xr_button: true, media_width: media_width, lazy_load: lazy_load
+              -%}
+            </li>
+          {% endif %}
+        {%- endfor -%}
+      </ul>
+    </slickslider-component>
+  {% else %}
+    <slider-component id="GalleryViewer-{{ section.id }}{{ id_append }}" class="slider-mobile-gutter{% if section.settings.gallery_layout contains 'slick' %} hidden{% endif %}">
+      {%- unless is_duplicate -%}
+        <a class="skip-to-content-link button visually-hidden quick-add-hidden" href="#ProductInfo-{{ section.id }}">
+          {{ "accessibility.skip_to_product_info" | t }}
+        </a>
+      {%- endunless -%}
+      <ul
+        id="Slider-Gallery-{{ section.id }}{{ id_append }}"
+        class="product__media-list contains-media grid grid--peek list-unstyled slider slider--mobile"
+        role="list"
+      >
+        {%- if product.selected_or_first_available_variant.featured_media != null -%}
+          {%- assign featured_media = product.selected_or_first_available_variant.featured_media -%}
           <li
-            id="Slide-{{ section.id }}-{{ media.id }}{{ id_append }}"
-            class="product__media-item grid__item slider__slide{% if single_media_visible %} product__media-item--single{% endif %}{% if product.selected_or_first_available_variant.featured_media == null and forloop.index == 1 %} is-active{% endif %}{% if media.media_type != 'image' %} product__media-item--full{% endif %}{% if section.settings.hide_variants and variant_images contains media.src %} product__media-item--variant{% endif %}"
-            data-media-id="{{ section.id }}-{{ media.id }}"
+            id="Slide-{{ section.id }}-{{ featured_media.id }}{{ id_append }}"
+            class="product__media-item grid__item slider__slide is-active{% if single_media_visible %} product__media-item--single{% endif %}{% if featured_media.media_type != 'image' %} product__media-item--full{% endif %}{% if section.settings.hide_variants and variant_images contains featured_media.src %} product__media-item--variant{% endif %}"
+            data-media-id="{{ section.id }}-{{ featured_media.id }}"
           >
-            {%- liquid
-              assign media_position = media_position | default: 0 | plus: 1
-              assign lazy_load = false
-              if media_position > 1
-                assign lazy_load = true
-              endif
-              render 'product-thumbnail', media: media, media_count: media_count, position: media_position, desktop_layout: section.settings.gallery_layout, mobile_layout: section.settings.mobile_thumbnails, loop: section.settings.enable_video_looping, modal_id: section.id, xr_button: true, media_width: media_width, lazy_load: lazy_load
-            -%}
+            {%- assign media_position = 1 -%}
+            {% render 'product-thumbnail', media: featured_media, media_count: media_count, position: media_position, desktop_layout: section.settings.gallery_layout, mobile_layout: section.settings.mobile_thumbnails, loop: section.settings.enable_video_looping, modal_id: section.id, xr_button: true, media_width: media_width, lazy_load: false %}
           </li>
-        {%- endunless -%}
-      {%- endfor -%}
-    </ul>
-    {%- unless is_duplicate -%}
-      <div class="slider-buttons no-js-hidden quick-add-hidden{% if hide_mobile_slider %} small-hide{% endif %}">
-        <button
-          type="button"
-          class="slider-button slider-button--prev"
-          name="previous"
-          aria-label="{{ 'general.slider.previous_slide' | t }}"
-        >
-          {% render 'icon-caret' %}
-        </button>
-        <div class="slider-counter caption">
-          <span class="slider-counter--current">1</span>
-          <span aria-hidden="true"> / </span>
-          <span class="visually-hidden">{{ 'general.slider.of' | t }}</span>
-          <span class="slider-counter--total">{{ media_count }}</span>
+        {%- endif -%}
+        {%- for media in product.media -%}
+          {%- unless media.id == product.selected_or_first_available_variant.featured_media.id -%}
+            <li
+              id="Slide-{{ section.id }}-{{ media.id }}{{ id_append }}"
+              class="product__media-item grid__item slider__slide{% if single_media_visible %} product__media-item--single{% endif %}{% if product.selected_or_first_available_variant.featured_media == null and forloop.index == 1 %} is-active{% endif %}{% if media.media_type != 'image' %} product__media-item--full{% endif %}{% if section.settings.hide_variants and variant_images contains media.src %} product__media-item--variant{% endif %}"
+              data-media-id="{{ section.id }}-{{ media.id }}"
+            >
+              {%- liquid
+                assign media_position = media_position | default: 0 | plus: 1
+                assign lazy_load = false
+                if media_position > 1
+                  assign lazy_load = true
+                endif
+                render 'product-thumbnail', media: media, media_count: media_count, position: media_position, desktop_layout: section.settings.gallery_layout, mobile_layout: section.settings.mobile_thumbnails, loop: section.settings.enable_video_looping, modal_id: section.id, xr_button: true, media_width: media_width, lazy_load: lazy_load
+              -%}
+            </li>
+          {%- endunless -%}
+        {%- endfor -%}
+      </ul>
+      {%- unless is_duplicate -%}
+        <div class="slider-buttons no-js-hidden quick-add-hidden{% if hide_mobile_slider %} small-hide{% endif %}">
+          <button
+            type="button"
+            class="slider-button slider-button--prev"
+            name="previous"
+            aria-label="{{ 'general.slider.previous_slide' | t }}"
+          >
+            {% render 'icon-caret' %}
+          </button>
+          <div class="slider-counter caption">
+            <span class="slider-counter--current">1</span>
+            <span aria-hidden="true"> / </span>
+            <span class="visually-hidden">{{ 'general.slider.of' | t }}</span>
+            <span class="slider-counter--total">{{ media_count }}</span>
+          </div>
+          <button
+            type="button"
+            class="slider-button slider-button--next"
+            name="next"
+            aria-label="{{ 'general.slider.next_slide' | t }}"
+          >
+            {% render 'icon-caret' %}
+          </button>
         </div>
-        <button
-          type="button"
-          class="slider-button slider-button--next"
-          name="next"
-          aria-label="{{ 'general.slider.next_slide' | t }}"
-        >
-          {% render 'icon-caret' %}
-        </button>
-      </div>
-    {%- endunless -%}
-  </slider-component>
+      {%- endunless -%}
+    </slider-component>
+  {% endif %}
+
   {%- if first_3d_model -%}
     <button
       class="button button--full-width product__xr-button"

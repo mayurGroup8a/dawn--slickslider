@@ -1415,3 +1415,8 @@ a.product__text {
 .product-media-container .media {
   padding-top: var(--ratio-percent);
 }
+
+
+#slickslider #thumbs  .product-media-container .product__modal-opener .product__media-toggle{
+  display: none;
+}

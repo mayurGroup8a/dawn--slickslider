@@ -29,6 +29,7 @@
 
     {% render 'meta-tags' %}
 
+    <script src="{{ 'vendor.js' | asset_url }}" defer="defer"></script>
     <script src="{{ 'global.js' | asset_url }}" defer="defer"></script>
     {{ content_for_header }}
 
@@ -244,9 +245,10 @@
     {%- if settings.cart_type == 'drawer' -%}
       {%- render 'cart-drawer' -%}
     {%- endif -%}
-
-    {% section 'announcement-bar' %}
-    {% section 'header' %}
+      <div style="display: none">
+      {% section 'announcement-bar' %}
+      {% section 'header' %}
+      </div>
     <main id="MainContent" class="content-for-layout focus-none" role="main" tabindex="-1">
       {{ content_for_layout }}
     </main>
